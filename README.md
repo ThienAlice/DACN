@@ -9,6 +9,27 @@ Welcome to the **CI/CD Pipeline Integration and Security** project! This project
 ## Workflow CI/CD Pipeline
 ![Mô tả về ảnh](Workflow/DACN.png)
 
+The project is divided into **3 phases**:
+
+### CI Phase:
+- **Push source code** to GitHub.
+- **Jenkins Trigger Code** from the GitHub repository and perform tasks.
+- **Perform SAST scan** using **SonarQube**.
+- **Perform SCA scan** using **Snyk**.
+- **Set up OWASP Zap** to perform scans after deployment.
+- **Compile, Test, Build, and Deploy** using **Maven**.
+- **Store artifacts** using **Nexus Repository**.
+- **Build and tag images** using **Docker**.
+- **Scan images** using **Trivy**.
+- **Store images** in **Azure Container Registry**.
+
+### CD Phase:
+- **Write YAML files** (Ingress, Service, Deployment) for deploying to the Kubernetes cluster.
+- **Utilize Azure Kubernetes Service**.
+- **Implement GitOps** with **ArgoCD**.
+
+### Monitoring Phase:
+- **Monitor** using **Prometheus** and **Grafana** (for Jenkins server and Kubernetes Environment).
 ## Tools Used
 In this project, we applied various popular tools to ensure the CI/CD processes are automated, efficient, and secure. The tools include:
 
