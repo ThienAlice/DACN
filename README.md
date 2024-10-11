@@ -3,38 +3,12 @@
 Welcome to the **CI/CD Pipeline Integration and Security** project! This project applies various popular tools to ensure that the Continuous Integration and Continuous Deployment (CI/CD) processes are automated, efficient, and secure.
 
 ## Contributor
-
 - **Ngô Minh Thiên** - 21522623  
 - **Nguyễn Đình Bảo Long** - 21522303  
 
-## Table of Contents
-
-- [Application Code](#application-code)
-- [Jenkins Pipeline Code](#jenkins-pipeline-code)
-- [Kubernetes Manifests Files](#kubernetes-manifests-files)
-- [Tools Used](#tools-used)
-
-## Workflow
-
-![DACN](https://hackmd.io/_uploads/ryJMMqUkyg.png)
-
-## Application Code
-
-The `Application-Code` directory contains the source code for the application, including the frontend developed with **ReactJS** and the backend with **NodeJS**.
-
-
-## Jenkins Pipeline Code
-
-In the `Jenkins-Pipeline-Code` directory, you will find Jenkins pipeline scripts. These scripts automate the CI/CD process, ensuring smooth integration and deployment of your application.
-
----
-
-## Kubernetes Manifests Files
-
-The `Kubernetes-Manifests-Files` directory holds Kubernetes manifests for deploying your application on **AKS** (Azure Kubernetes Service). Customize these files to suit your project needs.
+## Workflow CI/CD Pipeline
 
 ## Tools Used
-
 In this project, we applied various popular tools to ensure the CI/CD processes are automated, efficient, and secure. The tools include:
 
 | **Tool**                     | **Function**                                                                  |
