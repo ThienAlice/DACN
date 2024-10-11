@@ -1,53 +1,56 @@
-# BoardgameListingWebApp
+# Building and Securing CI/CD Pipelines: Applying DevSecOps for End-to-End Application Deployment
 
-## Description
+Welcome to the **CI/CD Pipeline Integration and Security** project! This project applies various popular tools to ensure that the Continuous Integration and Continuous Deployment (CI/CD) processes are automated, efficient, and secure.
 
-**Board Game Database Full-Stack Web Application.**
-This web application displays lists of board games and their reviews. While anyone can view the board game lists and reviews, they are required to log in to add/ edit the board games and their reviews. The 'users' have the authority to add board games to the list and add reviews, and the 'managers' have the authority to edit/ delete the reviews on top of the authorities of users.  
+## Contributor
 
-## Technologies
+- **Ngô Minh Thiên** - 21522623  
+- **Nguyễn Đình Bảo Long** - 21522303  
 
-- Java
-- Spring Boot
-- Amazon Web Services(AWS) EC2
-- Thymeleaf
-- Thymeleaf Fragments
-- HTML5
-- CSS
-- JavaScript
-- Spring MVC
-- JDBC
-- H2 Database Engine (In-memory)
-- JUnit test framework
-- Spring Security
-- Twitter Bootstrap
-- Maven
+## Table of Contents
 
-## Features
+- [Application Code](#application-code)
+- [Jenkins Pipeline Code](#jenkins-pipeline-code)
+- [Kubernetes Manifests Files](#kubernetes-manifests-files)
+- [Tools Used](#tools-used)
 
-- Full-Stack Application
-- UI components created with Thymeleaf and styled with Twitter Bootstrap
-- Authentication and authorization using Spring Security
-  - Authentication by allowing the users to authenticate with a username and password
-  - Authorization by granting different permissions based on the roles (non-members, users, and managers)
-- Different roles (non-members, users, and managers) with varying levels of permissions
-  - Non-members only can see the boardgame lists and reviews
-  - Users can add board games and write reviews
-  - Managers can edit and delete the reviews
-- Deployed the application on AWS EC2
-- JUnit test framework for unit testing
-- Spring MVC best practices to segregate views, controllers, and database packages
-- JDBC for database connectivity and interaction
-- CRUD (Create, Read, Update, Delete) operations for managing data in the database
-- Schema.sql file to customize the schema and input initial data
-- Thymeleaf Fragments to reduce redundancy of repeating HTML elements (head, footer, navigation)
+## Workflow
 
-## How to Run
+![DACN](https://hackmd.io/_uploads/ryJMMqUkyg.png)
 
-1. Clone the repository
-2. Open the project in your IDE of choice
-3. Run the application
-4. To use initial user data, use the following credentials.
-  - username: bugs    |     password: bunny (user role)
-  - username: daffy   |     password: duck  (manager role)
-5. You can also sign-up as a new user and customize your role to play with the application! 😊
+## Application Code
+
+The `Application-Code` directory contains the source code for the application, including the frontend developed with **ReactJS** and the backend with **NodeJS**.
+
+
+## Jenkins Pipeline Code
+
+In the `Jenkins-Pipeline-Code` directory, you will find Jenkins pipeline scripts. These scripts automate the CI/CD process, ensuring smooth integration and deployment of your application.
+
+---
+
+## Kubernetes Manifests Files
+
+The `Kubernetes-Manifests-Files` directory holds Kubernetes manifests for deploying your application on **AKS** (Azure Kubernetes Service). Customize these files to suit your project needs.
+
+## Tools Used
+
+In this project, we applied various popular tools to ensure the CI/CD processes are automated, efficient, and secure. The tools include:
+
+| **Tool**                     | **Function**                                                                  |
+|------------------------------|-------------------------------------------------------------------------------|
+| **GitHub**                   | Manages source code and triggers the pipeline on changes.                     |
+| **Jenkins**                  | CI tool responsible for integration, testing, and deployment.                 |
+| **SonarQube**                | Performs static application security testing (SAST).                          |
+| **Snyk**                     | Scans for vulnerabilities in third-party components (SCA).                    |
+| **Maven**                    | Manages projects, compiles, tests, and builds applications.                   |
+| **Nexus Repository**         | Stores artifacts after the build process.                                     |
+| **Docker**                   | Creates and manages Docker images for application deployment.                  |
+| **OWASP Zap**                | A tool for dynamic application security testing (DAST).                       |
+| **Trivy**                    | Scans for security vulnerabilities in Docker images.                          |
+| **Azure Container Registry**  | Stores Docker images.                                                         |
+| **Kubernetes (K8s)**         | Manages and deploys application containers.                                   |
+| **Argo CD**                  | Implements GitOps for Continuous Deployment, automating application updates on Kubernetes. |
+| **Prometheus & Grafana**     | Monitors system performance and sets up alerts.                               |
+
+---
