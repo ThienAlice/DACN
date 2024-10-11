@@ -7,6 +7,7 @@ Welcome to the **CI/CD Pipeline Integration and Security** project! This project
 - **Nguyễn Đình Bảo Long** - 21522303  
 
 ## Workflow CI/CD Pipeline
+![Mô tả về ảnh](Workflow/DACN.png)
 
 ## Tools Used
 In this project, we applied various popular tools to ensure the CI/CD processes are automated, efficient, and secure. The tools include:
