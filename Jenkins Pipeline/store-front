@@ -25,7 +25,7 @@ pipeline {
                    // Di chuyển vào thư mục
                     git branch: 'master', 
                         credentialsId: 'git-cred', 
-                        url: 'https://github.com/ThienAlice/Scanning-K8s-Cluster-Secure-CI-CD-Pipeline-with-Kubescape.git'  // Clone repository từ Git
+                        url: 'https://github.com/ThienAlice/DACN.git'  // Clone repository từ Git
                 
             }
         }
@@ -122,7 +122,7 @@ pipeline {
         }
         stage('Update Manifest') {
             environment {
-                GIT_REPO_NAME = "Scanning-K8s-Cluster-Secure-CI-CD-Pipeline-with-Kubescape"
+                GIT_REPO_NAME = "DACN"
                 GIT_USER_NAME = "ThienAlice"
             }
             steps {
