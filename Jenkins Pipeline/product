@@ -1,0 +1,97 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'jdk17'
+    }
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+        TRIVY_IMAGE_REPORT = "trivy-fs-report-${env.BUILD_ID}.html"
+        CI_PROJECT_NAME = 'microservice/product-service' 
+        IMAGE_VERSION = "${CI_PROJECT_NAME}:${env.BUILD_ID}"
+    }
+    stages {
+        stage('Cleaning Workspace') {
+            steps {
+                cleanWs()  // Dọn dẹp workspace
+            }
+        }
+        stage('Git Checkout') {
+            steps {
+                   // Di chuyển vào thư mục
+                    git branch: 'master', 
+                        credentialsId: 'git-cred', 
+                        url: 'https://github.com/ThienAlice/Scanning-K8s-Cluster-Secure-CI-CD-Pipeline-with-Kubescape.git'  // Clone repository từ Git
+                
+            }
+        }
+        stage('Install Dependencies and Build') {
+            steps {
+                dir('workloads/src/product-service') {  // Di chuyển vào thư mục
+                    sh 'cargo build'
+                    
+                }
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                dir('workloads/src/product-service') {  // Di chuyển vào thư mục
+                    withSonarQubeEnv('sonar') {  // Sử dụng môi trường SonarQube đã cấu hình
+                        sh '''
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectName=MicroServiceProject/product-service \
+                        -Dsonar.projectKey=product-service \
+                        
+                        '''  // Chạy phân tích mã nguồn với SonarQube
+                    }
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, 
+                        credentialsId: 'sonar-token'  // Chờ kết quả kiểm tra chất lượng từ SonarQube
+                }
+            }
+        }
+        stage('Snyk Security Test') {
+            steps {
+                dir('workloads/src/product-service') {  // Di chuyển vào thư mục
+                    script {
+                        snykSecurity failOnError: false, 
+                            failOnIssues: false, 
+                            projectName: 'MicroService/product-service', 
+                            snykInstallation: 'snyk', 
+                            snykTokenId: 'snyk-token', 
+                            targetFile: 'Cargo.toml'  // Chạy Snyk để kiểm tra các vấn đề bảo mật
+                    }
+                }
+            }
+        }
+        stage('Build and Tage Docker Image') {
+            steps {
+                dir('workloads/src/product-service'){
+                    withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
+                        sh """docker build -t ${IMAGE_VERSION} ."""
+                    }
+                }
+               
+            }
+        }
+        stage('Docker Image Scan') {
+            steps {
+                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all """
+                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --timeout 10m --format template --template "@contrib/html.tpl" --output ${CI_PROJECT_NAME}/${TRIVY_IMAGE_REPORT} $IMAGE_VERSION"""
+                sh """curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} --upload-file ${TRIVY_IMAGE_REPORT} http://nexus.thienngo.tech/repository/trivy_report/${TRIVY_IMAGE_REPORT}"""
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
+                    sh """docker tag ${IMAGE_VERSION} harbor.thienngo.click/devsecops/${IMAGE_VERSION}"""
+                    sh """docker push harbor.thienngo.click/devsecops/${IMAGE_VERSION}"""
+                }
+            }
+        }
+    }
+}
