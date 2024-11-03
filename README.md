@@ -7,7 +7,8 @@ Welcome to the **CI/CD Pipeline Integration and Security** project! This project
 - **Nguyễn Đình Bảo Long** - 21522303  
 
 ## Workflow CI/CD Pipeline
-![Mô tả về ảnh](Workflow/DACN.png)
+![Mô tả về ảnh](architecture/DACN.png)
+
 
 The project is divided into **3 phases**:
 
