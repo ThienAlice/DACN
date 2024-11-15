@@ -7,6 +7,13 @@
     @removeFromCart="removeFromCart"
     @submitOrder="submitOrder"
   ></router-view>
+  <!-- Danh sách đánh giá hiển thị trực tiếp -->
+  <div v-for="review in reviews" :key="review.text" class="review">
+    <p>{{ review.text }}</p> <!-- Có thể gây XSS nếu review.text chứa mã JavaScript -->
+  </div>
+  <!-- Thêm ô nhập đánh giá và nút gửi -->
+  <input v-model="newReview" placeholder="Write a review" />
+  <button @click="addReview(newReview)">Submit Review</button>
 </template>
 
 <script>
@@ -21,6 +28,8 @@ export default {
     return {
       cartItems: [],
       products: [],
+      reviews: [], // Thêm danh sách đánh giá
+      newReview: '' // Thêm biến lưu trữ đánh giá mới
     }
   },
   computed: {
@@ -47,15 +56,12 @@ export default {
         })
     },
     addToCart({ productId, quantity }) {
-      // check if the product is already in the cart
       const existingCartItem = this.cartItems.find(
         item => item.product.id == productId
       )
       if (existingCartItem) {
-        // if it is, increment the quantity
         existingCartItem.quantity += quantity
       } else {
-        // if not, find the product, and add it with quantity to the cart
         const product = this.products.find(product => product.id == productId)
         this.cartItems.push({ product, quantity })
       }
@@ -64,24 +70,17 @@ export default {
       this.cartItems.splice(index, 1)
     },
     submitOrder() {
-      // get the order-service URL from an environment variable
-      // const orderServiceUrl = process.env.VUE_APP_ORDER_SERVICE_URL;
-
-      // create an order object
+      const customerId = prompt("Enter customer ID:"); // Nhận từ người dùng
       const order = {
-        customerId: Math.floor(Math.random() * 10000000000).toString(),
-        items: this.cartItems.map(item => {
-          return {
-            productId: item.product.id,
-            quantity: item.quantity,
-            price: item.product.price
-          }
-        })
-      }
+        customerId: customerId, // Không kiểm tra đầu vào này
+        items: this.cartItems.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          price: item.product.price
+        }))
+      };
 
-      console.log(JSON.stringify(order));
-
-      // call the order-service using fetch
+      // Gửi đơn hàng với customerId trực tiếp
       fetch(`/order`, {
         method: 'POST',
         headers: {
@@ -90,7 +89,6 @@ export default {
         body: JSON.stringify(order)
       })
         .then(response => {
-          console.log(response)
           if (!response.ok) {
             alert('Error occurred while submitting order')
           } else {
@@ -99,9 +97,12 @@ export default {
           }
         })
         .catch(error => {
-          console.log(error)
           alert('Error occurred while submitting order')
         })
+    },
+    addReview(review) {
+      // Thêm review trực tiếp vào danh sách mà không kiểm tra XSS
+      this.reviews.push({ text: review });
     }
   },
 }
