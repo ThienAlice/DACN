@@ -17,7 +17,7 @@ spec:
         "kubernetes.io/os": linux
       containers:
       - name: product-service
-        image: acr4nt534.azurecr.io/product-service:10
+        image: harbor.thienngo.click/devsecops/microservice/product-service:6
         ports:
         - containerPort: 3002
         env: 
