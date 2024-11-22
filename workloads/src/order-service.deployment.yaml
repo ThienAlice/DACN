@@ -17,7 +17,7 @@ spec:
         "kubernetes.io/os": linux
       containers:
       - name: order-service
-        image: acr4nt534.azurecr.io/order-service:10
+        image: harbor.thienngo.click/devsecops/microservice/order-service:21
         ports:
         - containerPort: 3000
         env:
