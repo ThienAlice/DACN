@@ -1,0 +1,5 @@
+[source.crates-io]
+replace-with = "nexus"
+
+[source.nexus]
+registry = "http://nexus.thienngo.tech/repository/cargo-proxy-repo/"
