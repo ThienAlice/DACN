@@ -29,7 +29,7 @@ spec:
               - ALL
           privileged: false
           readOnlyRootFilesystem: true
-        image: harbor.thienngo.click/devsecops2/microservice2/cartservice:21
+        image: harbor.thienngo.click/devsecops2/microservices2/cartservice:21
         ports:
         - containerPort: 7070
         env:
