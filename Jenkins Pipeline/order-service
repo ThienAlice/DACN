@@ -120,7 +120,7 @@ pipeline {
                             git config user.email "thienngo.081003@gmail.com"
                             git config user.name "ThienAlice"
                             echo $TAG_IMAGE
-                            imageTag=$(grep -oP '(?<=devsecops/microservice/store-front-service:)[^ ]+' store-front.deployment.yaml)
+                            imageTag=$(grep -oP '(?<=devsecops/microservice/order-service:)[^ ]+' order-service.deployment.yaml)
                             echo $imageTag
                             sed -i "s#${HARBOR_IMAGE}:${imageTag}#${HARBOR_IMAGE}:$TAG_IMAGE#" order-service.deployment.yaml
                             git add order-service.deployment.yaml
