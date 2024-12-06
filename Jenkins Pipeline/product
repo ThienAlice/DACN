@@ -10,7 +10,7 @@ pipeline {
         TRIVY_IMAGE_REPORT = "trivy-image-report-product-${env.BUILD_ID}.html"
         CI_PROJECT_NAME = 'microservice/product-service' 
         VERSION  = "0.0.1"
-        TAG_IMAGE= "${VERSION}-${env.BUILD_ID}"
+        TAG_IMAGE= "${env.BUILD_ID}"
         IMAGE_VERSION = "${CI_PROJECT_NAME}:${TAG_IMAGE}"
         
         PROJECT_NAME = 'product-service'
