@@ -1,25 +1,24 @@
+@Library('jenkins-libraries') _
 pipeline {
     agent { label 'build-server' }
     tools {
         jdk 'jdk17'
         nodejs 'node18'
     }
-    tools {
-        jdk 'jdk17'
-        nodejs 'node18'
-    }
     environment {
-        NAME = 'order-service'
         SCANNER_HOME = tool 'sonar-scanner'
-        TRIVY_IMAGE_REPORT = "trivy-image-report-${NAME}-${env.BUILD_ID}.html"
-        CI_PROJECT_NAME = 'microservice/${NAME}' 
+        FOLDER_PATH="source/src/order-service"
+        TRIVY_IMAGE_REPORT = "trivy-image-report-${env.BUILD_ID}.html"
+        CI_PROJECT_NAME = 'microservice/order-service' 
         VERSION  = "0.0.1"
-        TAG_IMAGE= "${VERSION}-${env.BUILD_ID}"
+        TAG_IMAGE= "${env.BUILD_ID}"
         IMAGE_VERSION = "${CI_PROJECT_NAME}:${TAG_IMAGE}"
-        REPO = "${NAME}-repo"
-        ZIP_FILE="dist-${VERSION}-${env.BUILD_ID}.tar.gz"
+        PROJECT_NAME = 'order-service'
+        ARTIFACT_NAME = "${PROJECT_NAME}-build-${TAG_IMAGE}.tar.gz"
+        
         HARBOR_REPO_NAME="devsecops"
-        HARBOR_IMAGE="${HARBOR_REPO_NAME}/${CI_PROJECT_NAME}
+        HARBOR_IMAGE="${HARBOR_REPO_NAME}/${CI_PROJECT_NAME}"
+        NEXUS_URL = "http://nexus.thienngo.tech"
     }
     stages {
         stage('Cleaning Workspace') {
@@ -30,38 +29,20 @@ pipeline {
         stage('Git Checkout') {
             steps {
                    // Di chuyển vào thư mục
-                    git branch: 'master', 
+                    git branch: 'main', 
                         credentialsId: 'git-cred', 
                         url: 'https://github.com/ThienAlice/DACN.git'  // Clone repository từ Git
                 
             }
         }
-        stage('Install Dependencies') {
-            steps {
-                dir('workloads/src/order-service') {  // Di chuyển vào thư mục
-                    sh "npm install"  // Cài đặt các phụ thuộc npm
-                }
-            }
-        }
-        
-        stage('Build') {
-            steps {
-                dir('workloads/src/order-service') {  // Di chuyển vào thư mục
-                    sh "npm install fastify-cli -g"
-                    sh "fastify build"  // Build dự án
-                }
-            }
-        }
         stage('SonarQube Analysis') {
             steps {
-                dir('workloads/src/order-service') {  // Di chuyển vào thư mục
+                dir("${FOLDER_PATH}") {  // Di chuyển vào thư mục
+                    
                     withSonarQubeEnv('sonar') {  // Sử dụng môi trường SonarQube đã cấu hình
                         sh '''
-                        $SCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectName=MicroServiceProject/order-service \
-                        -Dsonar.projectKey=order-service \
-                        
-                        ''' 
+                        $SCANNER_HOME/bin/sonar-scanner 
+                        '''  
                     }
                 }
             }
@@ -74,40 +55,54 @@ pipeline {
                 }
             }
         }
+        stage('Setup npm Registry') {
+            steps {
+                script {
+                    sh """
+                    npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/
+                    """
+                }
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                dir("${FOLDER_PATH}") {  // Di chuyển vào thư mục
+                    sh "npm install"  // Cài đặt các phụ thuộc npm
+                }
+            }
+        }
+        stage('Trivy scan file system') {
+            steps {
+                dir("${FOLDER_PATH}") {  // Di chuyển vào thư mục
+                    sh '''trivy fs --format template --template "@/usr/local/share/trivy/templates/html.tpl" -o trivy-fs-report.html . '''
+                    archiveArtifacts artifacts: 'trivy-fs-report.html', allowEmptyArchive: true
+                }
+            }
+        }
         stage('Snyk Security Test') {
             steps {
-                dir('workloads/src/order-service') {  // Di chuyển vào thư mục
-                    script {
-                        snykSecurity failOnError: false, 
-                            failOnIssues: false, 
-                            projectName: 'MicroService/order-service', 
-                            snykInstallation: 'snyk', 
-                            snykTokenId: 'snyk-token', 
-                            targetFile: 'package.json'  // Chạy Snyk để kiểm tra các vấn đề bảo mật
-                    }
-                }
+                snykSecurityCheck("${FOLDER_PATH}", 'MicroService/order-service')
             }
         }
         stage('Build and Tage Docker Image') {
             steps {
-                dir('workloads/src/order-service'){
+                dir("${FOLDER_PATH}"){
                     withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
                         sh """docker build -t ${IMAGE_VERSION} ."""
                     }
                 }
-               
             }
         }
         stage('Docker Image Scan') {
             steps {
-                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all """
-                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --timeout 10m --format template --template "@contrib/html.tpl" --output ${CI_PROJECT_NAME}/${TRIVY_IMAGE_REPORT} $IMAGE_VERSION"""
-                sh """curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} --upload-file ${TRIVY_IMAGE_REPORT} http://nexus.thienngo.tech/repository/trivy_report/${TRIVY_IMAGE_REPORT}"""
+                sh """docker run --rm -v ${WORKSPACE}:/store} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all """
+                sh """docker run --rm -v ${WORKSPACE}:/store -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --timeout 10m --format template --template "@contrib/html.tpl" --output store/${TRIVY_IMAGE_REPORT} $IMAGE_VERSION"""
+                archiveArtifacts artifacts: "${TRIVY_IMAGE_REPORT}", allowEmptyArchive: true
             }
         }
         stage('Push Docker Image') {
             steps {
-                withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
+                withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') { 
                     sh """docker tag ${IMAGE_VERSION} harbor.thienngo.click/devsecops/${IMAGE_VERSION}"""
                     sh """docker push harbor.thienngo.click/devsecops/${IMAGE_VERSION}"""
                 }
@@ -115,17 +110,17 @@ pipeline {
         }
         stage('Update Manifest') {
             environment {
-                GIT_REPO_NAME = "DACN"
-                GIT_USER_NAME = "ThienAlice"
+                GIT_REPO_NAME = "Config-DACN"
+                GIT_USER_NAME = "baolonggg"
             }
             steps {
-                dir('workloads/src') {
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                dir('Config/infra1') {
+                    withCredentials([string(credentialsId: 'github-token-config', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             git config user.email "thienngo.081003@gmail.com"
                             git config user.name "ThienAlice"
                             echo $TAG_IMAGE
-                            imageTag=$(grep -oP '(?<=devsecops/microservice/order-service:)[^ ]+' order-service.deployment.yaml)
+                            imageTag=$(grep -oP '(?<=devsecops/microservice/store-front-service:)[^ ]+' store-front.deployment.yaml)
                             echo $imageTag
                             sed -i "s#${HARBOR_IMAGE}:${imageTag}#${HARBOR_IMAGE}:$TAG_IMAGE#" order-service.deployment.yaml
                             git add order-service.deployment.yaml
