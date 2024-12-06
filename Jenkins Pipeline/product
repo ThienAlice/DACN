@@ -140,10 +140,10 @@ pipeline {
                             git config user.email "thienngo.081003@gmail.com"
                             git config user.name "ThienAlice"
                             echo $TAG_IMAGE
-                            imageTag=$(grep -oP '(?<=devsecops/microservice/store-front-service:)[^ ]+' store-front.deployment.yaml)
+                            imageTag=$(grep -oP '(?<=devsecops/microservice/product-service:)[^ ]+' product-service.deployment.yaml)
                             echo $imageTag
-                            sed -i "s#${HARBOR_IMAGE}:${imageTag}#${HARBOR_IMAGE}:$TAG_IMAGE#" order-service.deployment.yaml
-                            git add order-service.deployment.yaml
+                            sed -i "s#${HARBOR_IMAGE}:${imageTag}#${HARBOR_IMAGE}:$TAG_IMAGE#" product-service.deployment.yaml
+                            git add product-service.deployment.yaml
                             git commit -m "Update deployment Image to version \${TAG_IMAGE}"
                             git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                         '''
