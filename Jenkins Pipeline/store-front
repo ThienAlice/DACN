@@ -1,18 +1,25 @@
+@Library('jenkins-libraries') _
 pipeline {
-    agent any
+    agent { label 'build-server' }
     tools {
         jdk 'jdk17'
+        nodejs 'node18'
     }
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        TRIVY_IMAGE_REPORT = "trivy-image-report-store-front-${env.BUILD_ID}.html"
+        FOLDER_PATH="source/src/store-front"
+        TRIVY_IMAGE_REPORT = "trivy-image-report-${env.BUILD_ID}.html"
         CI_PROJECT_NAME = 'microservice/store-front-service' 
-        IMAGE_VERSION = "${CI_PROJECT_NAME}:${env.BUILD_ID}"
         VERSION  = "0.0.1"
-        REPO = "store-front-service-repo"
-        ZIP_FILE="dist-${VERSION}.tar.gz"
+        TAG_IMAGE= "${env.BUILD_ID}"
+        IMAGE_VERSION = "${CI_PROJECT_NAME}:${TAG_IMAGE}"
+        
+        PROJECT_NAME = 'store-front'
+        ARTIFACT_NAME = "${PROJECT_NAME}-build-${TAG_IMAGE}.tar.gz"
+        
         HARBOR_REPO_NAME="devsecops"
         HARBOR_IMAGE="${HARBOR_REPO_NAME}/${CI_PROJECT_NAME}"
+        NEXUS_URL = "http://nexus.thienngo.tech"
     }
     stages {
         stage('Cleaning Workspace') {
@@ -23,31 +30,21 @@ pipeline {
         stage('Git Checkout') {
             steps {
                    // Di chuyển vào thư mục
-                    git branch: 'master', 
+                    git branch: 'main', 
                         credentialsId: 'git-cred', 
                         url: 'https://github.com/ThienAlice/DACN.git'  // Clone repository từ Git
                 
             }
         }
-        stage('Install Dependencies') {
-            steps {
-                dir('workloads/src/store-front') {  // Di chuyển vào thư mục
-                    sh "npm install"  // Cài đặt các phụ thuộc npm
-                }
-            }
-        }
-        
         stage('SonarQube Analysis') {
             steps {
-                dir('workloads/src/store-front') {  // Di chuyển vào thư mục
+                dir("$FOLDER_PATH") {  // Di chuyển vào thư mục
+                    
                     withSonarQubeEnv('sonar') {  // Sử dụng môi trường SonarQube đã cấu hình
                         sh '''
-                        $SCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectName=MicroServiceProject/store-front-service \
-                        -Dsonar.projectKey=store-front-service \
+                        $SCANNER_HOME/bin/sonar-scanner 
                         
-                        
-                        ''' 
+                        '''  
                     }
                 }
             }
@@ -60,56 +57,70 @@ pipeline {
                 }
             }
         }
-        stage('Build') {
+        stage('Setup npm Registry') {
             steps {
-                dir('workloads/src/store-front'){
-                    script {
-                        sh 'npm run build'
-                    }
+                script {
+                    sh """
+                    npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/
+                    """
                 }
-                
             }
         }
-        stage('Push artifact to Nexus') {
+        stage('Install Dependencies') {
             steps {
-                dir('workloads/src/store-front'){
-                    script {
-                        sh 'tar -czvf ${ZIP_FILE} dist'
-                        sh """curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} --upload-file ${ZIP_FILE} http://nexus.thienngo.tech/repository/${REPO}/${ZIP_FILE}"""
-                    }
+                dir("$FOLDER_PATH") {  // Di chuyển vào thư mục
+                    sh "npm install"// Cài đặt các phụ thuộc npm
                 }
-                
+            }
+        }
+        stage('Trivy scan file system') {
+            steps {
+                dir('$FOLDER_PATH') {  // Di chuyển vào thư mục
+                    sh '''trivy fs --format template --template "@/usr/local/share/trivy/templates/html.tpl" -o trivy-fs-report.html . '''
+                    archiveArtifacts artifacts: 'trivy-fs-report.html', allowEmptyArchive: true
+                }
             }
         }
         stage('Snyk Security Test') {
             steps {
-                dir('workloads/src/store-front') {  // Di chuyển vào thư mục
+                snykSecurityCheck("$FOLDER_PATH", 'MicroService/store-front-service')
+            }
+        }
+        stage('Build') {
+            steps {
+                dir("$FOLDER_PATH"){
                     script {
-                        snykSecurity failOnError: false, 
-                            failOnIssues: false, 
-                            projectName: 'MicroService/store-front-service', 
-                            snykInstallation: 'snyk', 
-                            snykTokenId: 'snyk-token', 
-                            targetFile: 'package.json'  // Chạy Snyk để kiểm tra các vấn đề bảo mật
+                        sh 'npm run build'
                     }
                 }
             }
         }
+        stage('Push artifact to Nexus') {
+            steps {
+                dir("$FOLDER_PATH"){
+                    script {
+                        sh 'tar -czvf ${ARTIFACT_NAME} dist'
+                        sh """curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} --upload-file ${ARTIFACT_NAME} ${NEXUS_URL}/repository/microservice-artifact-repo/${PROJECT_NAME}/build/${VERSION}/${ARTIFACT_NAME}"""
+                    }
+                }
+                
+            }
+        }
+        
         stage('Build and Tage Docker Image') {
             steps {
-                dir('workloads/src/store-front'){
+                dir("$FOLDER_PATH"){
                     withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
                         sh """docker build -t ${IMAGE_VERSION} ."""
                     }
                 }
-               
             }
         }
         stage('Docker Image Scan') {
             steps {
-                sh """docker run --rm -v ${WORKSPACE}:/store} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all """
-                sh """docker run --rm -v ${WORKSPACE}:/store -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --timeout 10m --format template --template "@contrib/html.tpl" --output store/${TRIVY_IMAGE_REPORT} $IMAGE_VERSION"""
-                sh """curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} --upload-file ${TRIVY_IMAGE_REPORT} http://nexus.thienngo.tech/repository/trivy_report/${TRIVY_IMAGE_REPORT}"""
+                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all """
+                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --timeout 10m --format template --template "@contrib/html.tpl" --output ${CI_PROJECT_NAME}/${TRIVY_IMAGE_REPORT} $IMAGE_VERSION"""
+                archiveArtifacts artifacts: "${TRIVY_IMAGE_REPORT}", allowEmptyArchive: true
             }
         }
         stage('Push Docker Image') {
@@ -122,23 +133,22 @@ pipeline {
         }
         stage('Update Manifest') {
             environment {
-                GIT_REPO_NAME = "DACN"
-                GIT_USER_NAME = "ThienAlice"
+                GIT_REPO_NAME = "Config-DACN"
+                GIT_USER_NAME = "baolonggg"
             }
             steps {
-                dir('workloads/src') {
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                dir('Config/infra1') {
+                    withCredentials([string(credentialsId: 'github-config-token', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             git config user.email "thienngo.081003@gmail.com"
                             git config user.name "ThienAlice"
-                            BUILD_NUMBER=${BUILD_NUMBER}
-                            echo $BUILD_NUMBER
+                            echo $TAG_IMAGE
                             imageTag=$(grep -oP '(?<=devsecops/microservice/store-front-service:)[^ ]+' store-front.deployment.yaml)
                             echo $imageTag
-                            sed -i "s#${HARBOR_IMAGE}:${imageTag}#${HARBOR_IMAGE}:${BUILD_NUMBER}#" store-front.deployment.yaml
+                            sed -i "s#${HARBOR_IMAGE}:${imageTag}#${HARBOR_IMAGE}:$TAG_IMAGE#" store-front.deployment.yaml
                             git add store-front.deployment.yaml
-                            git commit -m "Update deployment Image to version \${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:master
+                            git commit -m "Update deployment Image to version \${TAG_IMAGE}"
+                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                         '''
                     }
                 }
