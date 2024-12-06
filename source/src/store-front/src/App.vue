@@ -1,4 +1,3 @@
-
 <template>
   <TopNav :cartItemCount="cartItemCount"/>
   <router-view
@@ -8,13 +7,6 @@
     @removeFromCart="removeFromCart"
     @submitOrder="submitOrder"
   ></router-view>
-  <!-- Danh sách đánh giá hiển thị trực tiếp -->
-  <div v-for="review in reviews" :key="review.text" class="review">
-    <p>{{ review.text }}</p> <!-- XSS nếu review.text chứa mã JavaScript -->
-  </div>
-  <!-- Thêm ô nhập đánh giá và nút gửi -->
-  <input v-model="newReview" placeholder="Write a review" />
-  <button @click="addReview(newReview)">Submit Review</button>
 </template>
 
 <script>
@@ -29,8 +21,6 @@ export default {
     return {
       cartItems: [],
       products: [],
-      reviews: [], // Thêm danh sách đánh giá
-      newReview: '' // Thêm biến lưu trữ đánh giá mới
     }
   },
   computed: {
@@ -44,13 +34,11 @@ export default {
     this.getProducts()
   },
   methods: {
-    // SQL Injection - Lỗ hổng Injection
     getProducts() {
-      const searchQuery = "test' OR '1'='1";  // Giả lập một payload SQL Injection
-      fetch(`/products?search=${searchQuery}`)
+      fetch('/products')
         .then(response => response.json())
         .then(products => {
-          console.log('success getting products')
+          console.log('success getting proxy products')
           this.products = products
         })
         .catch(error => {
@@ -58,66 +46,42 @@ export default {
           alert('Error occurred while fetching products')
         })
     },
-
-    // Broken Authentication - Lỗ hổng xác thực yếu
-    login(username, password) {
-      // Không kiểm tra mật khẩu một cách bảo mật (giả lập lỗ hổng)
-      if (username === 'admin' && password === 'password') {
-        this.isAuthenticated = true; // Không bảo vệ đúng cách
-        alert('Logged in as admin');
+    addToCart({ productId, quantity }) {
+      // check if the product is already in the cart
+      const existingCartItem = this.cartItems.find(
+        item => item.product.id == productId
+      )
+      if (existingCartItem) {
+        // if it is, increment the quantity
+        existingCartItem.quantity += quantity
       } else {
-        alert('Invalid login');
+        // if not, find the product, and add it with quantity to the cart
+        const product = this.products.find(product => product.id == productId)
+        this.cartItems.push({ product, quantity })
       }
     },
-
-    // Sensitive Data Exposure - Tiết lộ dữ liệu nhạy cảm
-    fetchSensitiveData() {
-      fetch('/api/userdata', {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Bearer ' + userToken // Giả lập không mã hóa đúng cách
-        }
-      })
+    removeFromCart(index) {
+      this.cartItems.splice(index, 1)
     },
-
-    // Security Misconfiguration - Cấu hình bảo mật sai
-    accessUnsecuredAPI() {
-      fetch('http://localhost:3000/openApi')  // Kết nối đến một API không được bảo vệ
-        .then(response => response.json())
-        .then(data => console.log(data))
-        .catch(error => console.log('Failed to fetch data'));
-    },
-
-    // Cross-Site Scripting (XSS)
-    addReview(review) {
-      // Thêm review trực tiếp vào danh sách mà không kiểm tra XSS
-      this.reviews.push({ text: review });
-    },
-
-    // Insecure Deserialization - Lỗ hổng khi deserialization dữ liệu không an toàn
     submitOrder() {
-      const customerData = '{"username":"admin","password":"password"}'; // Dữ liệu có thể bị tấn công nếu không kiểm tra
-      const order = JSON.parse(customerData);  // Giả lập lỗ hổng deserialization không an toàn
-      fetch(`/order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(order)
-      });
-    },
+      // get the order-service URL from an environment variable
+      // const orderServiceUrl = process.env.VUE_APP_ORDER_SERVICE_URL;
 
-    // Cross-Site Request Forgery (CSRF) - Không bảo vệ CSRF
-    submitOrderWithoutCSRF() {
+      // create an order object
       const order = {
-        customerId: '12345',
-        items: this.cartItems.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity
-        }))
-      };
+        customerId: Math.floor(Math.random() * 10000000000).toString(),
+        items: this.cartItems.map(item => {
+          return {
+            productId: item.product.id,
+            quantity: item.quantity,
+            price: item.product.price
+          }
+        })
+      }
 
-      // CSRF không có token bảo vệ
+      console.log(JSON.stringify(order));
+
+      // call the order-service using fetch
       fetch(`/order`, {
         method: 'POST',
         headers: {
@@ -125,30 +89,19 @@ export default {
         },
         body: JSON.stringify(order)
       })
-      .then(response => console.log('Order submitted'))
-      .catch(error => console.error('Order submission failed'));
-    },
-
-    // Unvalidated Redirects and Forwards - Chuyển hướng không kiểm tra
-    goToPage(page) {
-      window.location.href = page;  // Không kiểm tra các URL trước khi chuyển hướng
-    },
-
-    // Broken Access Control - Truy cập không hợp lệ
-    viewSensitiveData() {
-      if (this.isAuthenticated) {
-        alert('Sensitive Data Here!');
-      } else {
-        alert('Access Denied!');
-      }
-    },
-
-    // Misconfigured CORS - CORS không cấu hình chính xác
-    fetchDataWithCORS() {
-      fetch('http://another-domain.com/api/data')  // Chưa cấu hình CORS trên server
-        .then(response => response.json())
-        .then(data => console.log(data))
-        .catch(error => console.error('Failed to fetch data'));
+        .then(response => {
+          console.log(response)
+          if (!response.ok) {
+            alert('Error occurred while submitting order')
+          } else {
+            this.cartItems = []
+            alert('Order submitted successfully')
+          }
+        })
+        .catch(error => {
+          console.log(error)
+          alert('Error occurred while submitting order')
+        })
     }
   },
 }
