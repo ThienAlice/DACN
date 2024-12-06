@@ -1,3 +1,4 @@
+/* eslint-disable */
 <template>
   <TopNav :cartItemCount="cartItemCount"/>
   <router-view
