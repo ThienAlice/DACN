@@ -116,11 +116,18 @@ pipeline {
                 }
             }
         }
-        stage('Docker Image Scan') {
+         stage('Docker Image Scan') {
             steps {
-                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy clean --all """
-                sh """docker run --rm -v ${WORKSPACE}:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --timeout 10m --format template --template "@contrib/html.tpl" --output ${CI_PROJECT_NAME}/${TRIVY_IMAGE_REPORT} $IMAGE_VERSION"""
-                archiveArtifacts artifacts: "${TRIVY_IMAGE_REPORT}", allowEmptyArchive: true
+                sh "trivy clean --all"
+                sh """
+                    trivy image --timeout 10m \
+                    --format template \
+                    --template "@/usr/local/share/trivy/templates/html.tpl" \
+                    --output ./${TRIVY_IMAGE_REPORT} \
+                        $IMAGE_VERSION
+                    """
+            // Lưu báo cáo vào Jenkins
+            archiveArtifacts artifacts: "./${TRIVY_IMAGE_REPORT}", allowEmptyArchive: true
             }
         }
         stage('Push Docker Image') {
@@ -129,6 +136,13 @@ pipeline {
                     sh """docker tag ${IMAGE_VERSION} harbor.thienngo.click/devsecops/${IMAGE_VERSION}"""
                     sh """docker push harbor.thienngo.click/devsecops/${IMAGE_VERSION}"""
                 }
+            }
+        }
+        stage('Clone Config Repo') {
+            steps {
+                git branch: 'main', 
+                credentialsId: 'github-token-config', 
+                url: 'https://github.com/baolonggg/Config-DACN.git'
             }
         }
         stage('Update Manifest') {
