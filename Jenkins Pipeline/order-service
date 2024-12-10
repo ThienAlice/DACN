@@ -19,6 +19,7 @@ pipeline {
         HARBOR_REPO_NAME="devsecops"
         HARBOR_IMAGE="${HARBOR_REPO_NAME}/${CI_PROJECT_NAME}"
         NEXUS_URL = "http://nexus.thienngo.tech"
+        DOMAIN = "http://lixsong.click/"
     }
     stages {
         stage('Cleaning Workspace') {
@@ -147,6 +148,22 @@ pipeline {
                     }
                 }
             }
+        }
+         stage('DAST Scan') {
+            steps {
+                sh 'mkdir dast-report'
+                sh """docker run --rm -v ${env.WORKSPACE}/dast-report:/tmp/ thien0810/arachni:v1.4-0.5.10 bin/arachni --output-verbose --scope-include-subdomains ${DOMAIN} --report-save-path=/tmp/microservice.afr """
+                sh """docker run --rm -v ${env.WORKSPACE}/dast-report:/tmp/ thien0810/arachni:v1.4-0.5.10 bin/arachni_reporter /tmp/microservice.afr --reporter=html:outfile=/tmp/microservice.html.zip"""
+                sh 'sudo chown -R jenkins:jenkins dast-report && sudo chmod 777 dast-report'
+                sh 'cd dast-report && unzip microservice.html.zip && rm -rf *.zip *.afr '
+            }
+        }
+        
+    }
+post {
+        always {
+            archiveArtifacts artifacts: "${TRIVY_IMAGE_REPORT}", allowEmptyArchive: true
+            archiveArtifacts artifacts: "dast-report/**/*", allowEmptyArchive: true
         }
     }
 }
