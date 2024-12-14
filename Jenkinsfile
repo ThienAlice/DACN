@@ -37,7 +37,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 dir("${FOLDER_PATH}") {
-                    withSonarQubeEnv('sonar') {  h
+                    withSonarQubeEnv('sonar') {  
                         sh "${SCANNER_HOME}/bin/sonar-scanner"
                     }
                 }
@@ -92,7 +92,6 @@ pipeline {
                     """
             }
         }
-    }
     post {
         always {
             archiveArtifacts artifacts: "${TRIVY_FS_REPORT}", allowEmptyArchive: true
@@ -107,4 +106,6 @@ pipeline {
         }
     }
 }
+    
+
 
