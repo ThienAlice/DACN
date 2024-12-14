@@ -2,9 +2,6 @@
 @Library('jenkins-libraries') _
 pipeline {
     agent { label 'build-server' }
-    parameters {
-        choice(name: 'SERVICE', choices: ['order-service', 'product-service', 'store-front'], description: 'Choose service'),
-    }
     tools {
         jdk 'jdk17'
         nodejs 'node18'
@@ -14,7 +11,7 @@ pipeline {
 
         SCANNER_HOME = tool 'sonar-scanner'
 
-        PROJECT_NAME = "${params.SERVICE}"
+        PROJECT_NAME = "order-service"
         FOLDER_PATH="source/src/${PROJECT_NAME}"
 
         TAG_IMAGE= "${env.BUILD_ID}"
@@ -57,17 +54,9 @@ pipeline {
         stage('Install Dependencies And Build') {
             steps {
                 script {
-                    dir("${FOLDER_PATH}") {
-                        if (params.SERVICE == 'order-service' || params.SERVICE == 'store-front' ){
-                            sh "npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/"
-                            sh "npm install"
-                            if (params.SERVICE == 'store-front'){
-                                sh "npm run build"
-                            }
-                        }
-                        else if (params.SERVICE == 'product-service'){
-                            sh "cargo build"
-                        }
+                    dir("${FOLDER_PATH}") 
+                        sh "npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/"
+                        sh "npm install"
                     }
                 }
             }
@@ -79,19 +68,7 @@ pipeline {
         }
         stage('Snyk Security Test') {
             steps {
-                snykSecurityCheck("${FOLDER_PATH}", 'MicroService/${params.SERVICE}')
-            }
-        }
-        stage('Push artifact to Nexus') {
-            steps {
-                script{
-                    dir("$FOLDER_PATH"){
-                        if (params.SERVICE == 'product-service' || params.SERVICE == 'store-front'){
-                            sh 'tar -czvf ${ARTIFACT_NAME} build'
-                            sh "curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} --upload-file ${ARTIFACT_NAME} ${NEXUS_URL}/repository/microservice-artifact-repo/${PROJECT_NAME}/build/${VERSION}/${ARTIFACT_NAME}"
-                        }
-                    }
-                }
+                snykSecurityCheck("${FOLDER_PATH}", "MicroService/${PROJECT_NAME}")
             }
         }
         stage('Build and Tage Docker Image') {
@@ -123,10 +100,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Pipeline for ${params.SERVICE} completed successfully!"
+            echo "Pipeline for ${PROJECT_NAME} completed successfully!"
         }
         failure {
-            echo "Pipeline for ${params.SERVICE} failed."
+            echo "Pipeline for ${PROJECT_NAME} failed."
         }
     }
 }
