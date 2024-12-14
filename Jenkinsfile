@@ -59,7 +59,6 @@ pipeline {
                         sh "npm install"
                     }
                 }
-            }
         }
         stage('Trivy scan file system') {
             steps {
@@ -92,6 +91,7 @@ pipeline {
                     """
             }
         }
+    }
     post {
         always {
             archiveArtifacts artifacts: "${TRIVY_FS_REPORT}", allowEmptyArchive: true
