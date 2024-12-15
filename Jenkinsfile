@@ -54,11 +54,12 @@ pipeline {
         stage('Install Dependencies And Build') {
             steps {
                 script {
-                    dir("${FOLDER_PATH}") 
+                    dir("${FOLDER_PATH}") {
                         sh "npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/"
-                        sh "npm install"
+                        sh 'npm install'
                     }
                 }
+            }
         }
         stage('Trivy scan file system') {
             steps {
@@ -74,7 +75,7 @@ pipeline {
             steps {
                 dir("${FOLDER_PATH}"){
                     withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
-                        sh """docker build -t ${IMAGE_VERSION} ."""
+                        sh "docker build -t ${IMAGE_VERSION} ."
                     }
                 }
             }
