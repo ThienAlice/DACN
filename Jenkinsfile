@@ -17,7 +17,7 @@ pipeline {
         NEXUS_URL = "http://nexus.thienngo.tech"
 
         TAG_IMAGE= "${env.BUILD_ID}"
-        IMAGE_VERSION = "${order-service}:${TAG_IMAGE}"
+        IMAGE_VERSION = "${PROJECT_NAME}:${TAG_IMAGE}"
 
         TRIVY_IMAGE_REPORT = "trivy-report_image-${env.BUILD_ID}.html"
         TRIVY_FS_REPORT = "trivy-report_fs-${env.BUILD_ID}.html"
