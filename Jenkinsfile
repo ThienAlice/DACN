@@ -11,7 +11,7 @@ pipeline {
 
         SCANNER_HOME = tool 'sonar-scanner'
 
-        PROJECT_NAME = "order-service"
+        PROJECT_NAME = "store-front"
         FOLDER_PATH="source/src/${PROJECT_NAME}"
 
         NEXUS_URL = "http://nexus.thienngo.tech"
@@ -59,6 +59,7 @@ pipeline {
                     dir("${FOLDER_PATH}") {
                         sh "npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/"
                         sh 'npm install'
+                        sh 'npm run build'
                     }
                 }
             }
