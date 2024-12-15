@@ -11,8 +11,9 @@ pipeline {
 
         SCANNER_HOME = tool 'sonar-scanner'
 
-        PROJECT_NAME = "store-front"
+        PROJECT_NAME = "product-service"
         FOLDER_PATH="source/src/${PROJECT_NAME}"
+        PATH = "/home/jenkins/.cargo/bin:$PATH"
 
         NEXUS_URL = "http://nexus.thienngo.tech"
 
@@ -57,9 +58,7 @@ pipeline {
             steps {
                 script {
                     dir("${FOLDER_PATH}") {
-                        sh "npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/"
-                        sh 'npm install'
-                        sh 'npm run build'
+                        sh 'cargo build'
                     }
                 }
             }
@@ -69,9 +68,21 @@ pipeline {
                 sh """trivy fs --format template --template "@/usr/local/share/trivy/templates/html.tpl" -o ${TRIVY_FS_REPORT} ${FOLDER_PATH} """
             }
         }
-        stage('Snyk Security Test') {
+        stage('Scan Depedencies') {
             steps {
-                snykSecurityCheck("${FOLDER_PATH}", "MicroService/${PROJECT_NAME}")
+                dir("${FOLDER_PATH}") { 
+                    script {
+                    // Chạy cargo audit và lấy exit code
+                        def auditStatus = sh(script: 'cargo audit --json > audit-report.json', returnStatus: true)
+                    
+                        if (auditStatus == 0) {
+                            echo "No vulnerabilities found."
+                        }else {
+                            echo "Vulnerabilities detected! Review the audit-report.json."
+                        }
+                    }
+                    archiveArtifacts artifacts: 'audit-report.json', allowEmptyArchive: true
+                }
             }
         }
         stage('Build and Tage Docker Image') {
