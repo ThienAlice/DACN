@@ -14,6 +14,8 @@ pipeline {
         PROJECT_NAME = "order-service"
         FOLDER_PATH="source/src/${PROJECT_NAME}"
 
+        NEXUS_URL = "http://nexus.thienngo.tech"
+
         TAG_IMAGE= "${env.BUILD_ID}"
         
 
