@@ -11,7 +11,6 @@ pipeline {
 
         SCANNER_HOME = tool 'sonar-scanner'
 
-        PROJECT_NAME = "${env.BRANCH_NAME}"
         FOLDER_PATH="source/src/${PROJECT_NAME}"
 
         NEXUS_URL = "http://nexus.thienngo.tech"
@@ -30,10 +29,19 @@ pipeline {
                     git branch: "${env.BRANCH_NAME}",
                         credentialsId: 'git-cred',
                         url: 'https://github.com/ThienAlice/DACN.git'
-                    echo "Hello youtube"
+                    echo "Preparing environment for branch: ${env.BRANCH_NAME}"
                 }
             }
         }
+        stage('Set Project Name') {
+            steps {
+                script {
+                    // Gọi hàm từ thư viện
+                    env.PROJECT_NAME = myLibrary.getProjectName(env.BRANCH_NAME)
+                    echo "Project Name: ${env.PROJECT_NAME}"
+                }
+            }
+        }        
         // stage ('Unit Test'){
         //     steps{
         //         echo "Unit test Success"
