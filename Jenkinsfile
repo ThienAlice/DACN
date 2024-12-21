@@ -10,7 +10,7 @@ pipeline {
         VERSION  = "0.0.1"
 
         SCANNER_HOME = tool 'sonar-scanner'
-
+        NEXUS_URL = "http://nexus.thienngo.tech"
         TRIVY_IMAGE_REPORT = "trivy-report_image-${env.BUILD_ID}.html"
         TRIVY_FS_REPORT = "trivy-report_fs-${env.BUILD_ID}.html"
 
