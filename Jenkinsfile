@@ -12,6 +12,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         NEXUS_URL = "http://nexus.thienngo.tech"
         TAG_IMAGE= "${env.BUILD_ID}"
+        
         TRIVY_IMAGE_REPORT = "trivy-report_image-${env.BUILD_ID}.html"
         TRIVY_FS_REPORT = "trivy-report_fs-${env.BUILD_ID}.html"
 
@@ -22,6 +23,7 @@ pipeline {
                 script {
                     env.PROJECT_NAME = myLibrary.getProjectName("${env.BRANCH_NAME}")
                     env.FOLDER_PATH="source/src/${PROJECT_NAME}"
+                    env.IMAGE_DOCKER = ${PROJECT_NAME}:${TAG_IMAGE}
                 }
             }
         }
@@ -71,11 +73,11 @@ pipeline {
                 
             }
         }
-        stage('Build and Tage Docker Image') {
+        stage('Build Docker Image') {
             steps {
                 dir("${FOLDER_PATH}"){
                     withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
-                        sh """docker build -t ${PROJECT_NAME}:${TAG_IMAGE} ."""
+                        sh """docker build -t ${IMAGE_DOCKER}  ."""
                     }
                 }
             }
@@ -88,7 +90,7 @@ pipeline {
                     --format template \
                     --template "@/usr/local/share/trivy/templates/html.tpl" \
                     --output ./${TRIVY_IMAGE_REPORT} \
-                        $IMAGE_VERSION
+                        ${IMAGE_DOCKER}
                     """
             }
         }
