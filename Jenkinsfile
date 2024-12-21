@@ -11,14 +11,19 @@ pipeline {
 
         SCANNER_HOME = tool 'sonar-scanner'
 
-        PROJECT_NAME = "${env.BRANCH_NAME}"
-        FOLDER_PATH="source/src/${PROJECT_NAME}"
-
         TRIVY_IMAGE_REPORT = "trivy-report_image-${env.BUILD_ID}.html"
         TRIVY_FS_REPORT = "trivy-report_fs-${env.BUILD_ID}.html"
 
     }
     stages {
+        stage ('Prepare') {
+            steps {
+                script {
+                    env.PROJECT_NAME = myLibrary.getProjectName("${env.BRANCH_NAME}")
+                    env.FOLDER_PATH="source/src/${PROJECT_NAME}"
+                }
+            }
+        }
         stage ('Unit Test'){
             steps{
                 echo "Unit test Success"
