@@ -11,6 +11,7 @@ pipeline {
 
         SCANNER_HOME = tool 'sonar-scanner'
         NEXUS_URL = "http://nexus.thienngo.tech"
+        TAG_IMAGE= "${env.BUILD_ID}"
         TRIVY_IMAGE_REPORT = "trivy-report_image-${env.BUILD_ID}.html"
         TRIVY_FS_REPORT = "trivy-report_fs-${env.BUILD_ID}.html"
 
@@ -74,7 +75,7 @@ pipeline {
             steps {
                 dir("${FOLDER_PATH}"){
                     withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
-                        sh """docker build -t ${IMAGE_VERSION} ."""
+                        sh """docker build -t ${PROJECT_NAME}:${TAG_IMAGE} ."""
                     }
                 }
             }
