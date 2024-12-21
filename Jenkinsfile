@@ -25,9 +25,6 @@ pipeline {
             }
         }
         stage('SonarQube Analysis') {
-            when{
-                expression { env. }
-            }
             steps {
                 dir("${FOLDER_PATH}") {
                     withSonarQubeEnv('sonar') {  
