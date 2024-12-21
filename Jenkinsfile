@@ -23,7 +23,7 @@ pipeline {
                 script {
                     env.PROJECT_NAME = myLibrary.getProjectName("${env.BRANCH_NAME}")
                     env.FOLDER_PATH="source/src/${PROJECT_NAME}"
-                    env.IMAGE_DOCKER = ${PROJECT_NAME}:${TAG_IMAGE}
+                    env.IMAGE_DOCKER = "${PROJECT_NAME}:${TAG_IMAGE}"
                 }
             }
         }
