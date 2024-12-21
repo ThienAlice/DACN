@@ -59,7 +59,10 @@ pipeline {
         }
         stage('Snyk Security Test') {
             steps {
-                myLibrary.snykSecurityCheck("${FOLDER_PATH}", "${PROJECT_NAME}")
+                script {
+                    myLibrary.snykSecurityCheck("${FOLDER_PATH}", "${PROJECT_NAME}")
+                }
+                
             }
         }
         stage('Build and Tage Docker Image') {
