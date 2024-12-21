@@ -16,6 +16,8 @@ pipeline {
         TRIVY_IMAGE_REPORT = "trivy-report_image-${env.BUILD_ID}.html"
         TRIVY_FS_REPORT = "trivy-report_fs-${env.BUILD_ID}.html"
 
+        PATH = "/home/jenkins/.cargo/bin:$PATH"
+
     }
     stages {
         stage ('Prepare') {
