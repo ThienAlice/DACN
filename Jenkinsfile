@@ -41,12 +41,12 @@ pipeline {
                     def dirs = env.CHANGED_DIRS.split(',')
                     dirs.each { dir ->
                         echo "Running pipeline for: ${dir}"
-                        // // Triển khai logic cho từng service ở đây
-                        // if (dir == 'login-service') {
-                        //     build job: 'login-service-pipeline', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
-                        // } else if (dir == 'logout-service') {
-                        //     build job: 'logout-service-pipeline', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
-                        // }
+                        // Triển khai logic cho từng service ở đây
+                        if (dir == 'store-front') {
+                            build job: 'store-front-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
+                        } else if (dir == 'order-service') {
+                            build job: 'order-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
+                        }
                     }
                 }
             }
