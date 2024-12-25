@@ -39,15 +39,16 @@ pipeline {
             steps {
                 script {
                     def dirs = env.CHANGED_DIRS.split(',')
-                    dirs.each { dir ->
-                        echo "Running pipeline for: ${dir}"
-                        // Triển khai logic cho từng service ở đây
-                        if (dir == 'store-front') {
-                            build job: 'MicroserviceWeb/job/store-front-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
-                        } else if (dir == 'order-service') {
-                            build job: 'MicroserviceWeb/job/order-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
-                        }
-                    }
+                    // dirs.each { dir ->
+                    //     echo "Running pipeline for: ${dir}"
+                    //     // Triển khai logic cho từng service ở đây
+                    //     if (dir == 'store-front') {
+                    //         build job: 'MicroserviceWeb/job/store-front-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
+                    //     } else if (dir == 'order-service') {
+                    //         build job: 'MicroserviceWeb/job/order-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
+                    //     }
+                    // }
+                    build job: 'store-front-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
                 }
             }
         }       
