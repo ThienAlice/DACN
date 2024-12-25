@@ -29,7 +29,7 @@ pipeline {
             steps {
                 script {
                     // Lấy danh sách các thư mục thay đổi
-                    def changedDirs = sh(script: "git diff --name-only HEAD~1 HEAD | awk -F/ '{print $1}' | sort | uniq", returnStdout: true).trim().split('\n')
+                    def changedDirs = sh(script: """git diff --name-only HEAD~1 HEAD | awk -F/ '{print \$1}' | sort | uniq""", returnStdout: true).trim().split('\n')
                     echo "Changed Directories: ${changedDirs}"
                     env.CHANGED_DIRS = changedDirs.join(',')
                 }
