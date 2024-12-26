@@ -48,7 +48,7 @@ pipeline {
                     //         build job: 'MicroserviceWeb/job/order-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
                     //     }
                     // }
-                    build job: 'store-front-service', parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
+                    build job: "../../store-front-service", parameters: [string(name: 'GIT_COMMIT', value: env.GIT_COMMIT)]
                 }
             }
         }       
