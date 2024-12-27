@@ -10,7 +10,6 @@ It is a simple REST API that allows you to add an order to a message queue that 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
-
 ## Message queue options
 
 This app can connect to either RabbitMQ or Azure Service Bus using AMQP 1.0. To connect to either of these services, you will need to provide appropriate environment variables for connecting to the message queue.
@@ -42,7 +41,7 @@ source .env
 
 ### Option 2: Azure Service Bus
 
-To run this against Azure Service Bus, you will need to create a Service Bus namespace and a queue. You can do this using the Azure CLI. 
+To run this against Azure Service Bus, you will need to create a Service Bus namespace and a queue. You can do this using the Azure CLI.
 
 ```bash
 az group create --name <resource-group-name> --location <location>

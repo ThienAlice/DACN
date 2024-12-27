@@ -1,5 +1,7 @@
 # product-service
 
+# Test
+
 This is a Rust app that simulates a product catalog. It is meant to be used in conjunction with the [store-front](../store-front) and [store-admin](../store-admin/) apps.
 
 This app is a simple REST API that allows you to get a list of products, get a single product, update a product, and add a product.
