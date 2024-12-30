@@ -1,0 +1,211 @@
+
+@Library('jenkins-libraries') _
+pipeline {
+    agent { label 'build-server' }
+    tools {
+        jdk 'jdk17'
+        nodejs 'node18'
+    }
+    environment {
+        // Tool Scan 
+        SCANNER_HOME = tool 'sonar-scanner'
+
+        // Project Information
+        PROJECT_NAME = "order-service"
+        FOLDER_PATH="source/src/${PROJECT_NAME}"
+        VERSION  = "0.0.1"
+
+        // Artifact Information
+        ARTIFACT_NAME = "${PROJECT_NAME}-build-${TAG_IMAGE}.tar.gz"
+
+        // Image Information
+        TAG_IMAGE= "${VERSION}"
+        IMAGE_DOCKER = "microservice/${PROJECT_NAME}:${TAG_IMAGE}"
+        HARBOR_REPO_NAME="devsecops-${params.BRANCH_NAME}"
+        HARBOR_IMAGE = "${HARBOR_REPO_NAME}/microservice/${PROJECT_NAME}"
+
+        // Scan Report
+        TRIVY_IMAGE_REPORT = "trivy-report_image-${env.BUILD_ID}.html"
+        TRIVY_FS_REPORT = "trivy-report_fs-${env.BUILD_ID}.html"
+
+        // URL
+        DOMAIN = "http://lixsong.click/"
+        NEXUS_URL = "http://nexus.thienngo.tech"
+        HARBOR_URL = "harbor.thienngo.click"
+
+        PATH = "/home/jenkins/.cargo/bin:$PATH"
+
+    }
+    stages {
+        stage('Git Checkout') {
+            steps {
+                  // Di chuyển vào thư mục
+                    git branch: "${params.BRANCH_NAME}", 
+                        credentialsId: 'git-cred', 
+                        url: 'https://github.com/ThienAlice/DACN.git'  // Clone repository từ Git
+            }
+        }
+        stage ('Unit Test'){
+            when {
+                expression {params.BRANCH_NAME != 'main' }
+            }
+            steps{
+                echo "Unit test Success"
+            }
+        }
+        stage ('Integration Test'){
+            when {
+                expression { params.BRANCH_NAME == 'test' }
+            }
+            steps{
+                echo "Integration Test Success"
+            }
+        }
+        stage('SonarQube Analysis') {
+            when {
+                expression { params.BRANCH_NAME =="dev"}
+            }
+            steps {
+                script{
+                    myLibrary.runSonarQubeAnalysis("${SCANNER_HOME}","${FOLDER_PATH}")
+                }
+            }
+        }
+        stage('Quality Gate') {
+            when {
+                expression { params.BRANCH_NAME=="dev"}
+            }
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false,
+                        credentialsId: 'sonar-token'
+                }
+            }
+        }
+        stage('Install Dependencies And Build') {
+            steps {
+                script {
+                    dir("${FOLDER_PATH}") {          
+                        sh "npm config set registry ${NEXUS_URL}/repository/npm-proxy-repo/"
+                        sh "npm install"
+                    } 
+                }
+            }
+        }
+        stage('Trivy scan file system') {
+            when {
+                expression { params.BRANCH_NAME=="dev"}
+            }
+            steps {
+                script{
+                    myLibrary.runTrivyFileSystemScan("${TRIVY_FS_REPORT}","${FOLDER_PATH}")
+                }
+            }
+        }
+        stage('Snyk Scan Depedencies') {
+            when {
+                expression { params.BRANCH_NAME=="dev"}
+            }
+            steps {
+                script{
+                    myLibrary.snykSecurityCheck("${FOLDER_PATH}", "${PROJECT_NAME}")
+                }
+                
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                dir("${FOLDER_PATH}"){
+                    withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') {
+                        sh "docker build -t ${IMAGE_DOCKER}  ."
+                    }
+                }
+            }
+        }
+        stage('Docker Image Scan') {
+            when {
+                expression { params.BRANCH_NAME=="dev"}
+            }
+            steps {
+                script{
+                    myLibrary.runTrivyImageScan("${TRIVY_IMAGE_REPORT}", "${IMAGE_DOCKER}")
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            when {
+                expression { params.BRANCH_NAME == 'test'|| params.BRANCH_NAME == 'main'}
+            }
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'harbor-cred', url: 'https://harbor.thienngo.click/') { 
+                        if (params.BRANCH_NAME == 'test') {
+                            HARBOR_REPO_NAME="devsecops-test"
+                        }
+                        sh "docker tag ${IMAGE_DOCKER} ${HARBOR_URL}/${HARBOR_REPO_NAME}/${IMAGE_DOCKER}"
+                        sh "docker push ${HARBOR_URL}/${HARBOR_REPO_NAME}/${IMAGE_DOCKER}"
+                    }
+                }
+            }
+        }
+        stage('Update Manifest') {
+            when {
+                expression { params.BRANCH_NAME == 'test' || params.BRANCH_NAME == 'main' }
+            }
+            environment {
+                GIT_REPO_NAME = "Config-DACN"
+                GIT_USER_NAME = "baolonggg"
+            }
+            steps {
+                script {
+                    git branch: "${params.BRANCH_NAME}", 
+                        credentialsId: 'github-token-config', 
+                        url: 'https://github.com/baolonggg/Config-DACN.git'
+                    
+                    dir('Config/infra1/k8s-prod') {
+                        withCredentials([string(credentialsId: 'github-token-config', variable: 'GITHUB_TOKEN')]) {
+                            sh """
+                                git config user.email "thienngo.081003@gmail.com"
+                                git config user.name "ThienAlice"
+                                
+                                # Lấy current image tag
+                                OLD_TAG=\$(cat ${PROJECT_NAME}.deployment.yaml | grep -oP '${HARBOR_IMAGE}:\\K[^\"]+')
+                                
+                                # Update image tag
+                                sed -i 's|${HARBOR_IMAGE}:'"\${OLD_TAG}"'|${HARBOR_IMAGE}:${TAG_IMAGE}|g' ${PROJECT_NAME}.deployment.yaml
+                                
+                                # Commit và push changes
+                                git add ${PROJECT_NAME}.deployment.yaml
+                                git commit -m "Update deployment image to version ${TAG_IMAGE}"
+                                git push https://\${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:${params.BRANCH_NAME}
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        stage('DAST Scan') {
+            when {
+                expression { params.BRANCH_NAME == 'test' || params.BRANCH_NAME == 'main'}
+            }
+            steps {
+                script{
+                    myLibrary.runDastScan("${env.WORKSPACE}", "${DOMAIN}")
+                }
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: "${TRIVY_FS_REPORT}", allowEmptyArchive: true
+            archiveArtifacts artifacts: "${TRIVY_IMAGE_REPORT}", allowEmptyArchive: true
+            cleanWs()
+        }
+        success {
+            echo "Pipeline for ${PROJECT_NAME} completed successfully!"
+        }
+        failure {
+            echo "Pipeline for ${PROJECT_NAME} failed."
+        }
+    }
+}
