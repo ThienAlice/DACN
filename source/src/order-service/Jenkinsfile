@@ -128,7 +128,7 @@ pipeline {
             }
             steps {
                 script{
-                    myLibrary.runTrivyImageScan("${TRIVY_IMAGE_REPORT}", "${IMAGE_DOCKER}")
+                    myLibrary.runTrivyImageScan("${IMAGE_DOCKER}", "${TRIVY_IMAGE_REPORT}")
                 }
             }
         }
